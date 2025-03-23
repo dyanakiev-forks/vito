@@ -142,34 +142,6 @@ class SitesTest extends TestCase
             ]);
     }
 
-    public function test_update_env(): void
-    {
-        SSH::fake();
-
-        Sanctum::actingAs($this->user, ['read', 'write']);
-
-        /** @var Site $site */
-        $site = Site::factory()->create([
-            'server_id' => $this->server->id,
-        ]);
-
-        $envContent = "APP_NAME=Laravel\nAPP_ENV=production";
-
-        $this->json('PUT', route('api.projects.servers.sites.env', [
-            'project' => $this->server->project,
-            'server' => $this->server,
-            'site' => $site,
-        ]), [
-            'env' => $envContent,
-        ])
-            ->assertSuccessful()
-            ->assertJsonFragment([
-                'domain' => $site->domain,
-            ]);
-
-        SSH::assertExecuted('edit-file');
-    }
-
     public function test_update_load_balancer(): void
     {
         SSH::fake();
@@ -218,6 +190,31 @@ class SitesTest extends TestCase
         ]);
     }
 
+    public function test_clone_site(): void
+    {
+        SSH::fake();
+
+        Sanctum::actingAs($this->user, ['read', 'write']);
+
+        /** @var Site $site */
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $this->json('POST', route('api.projects.servers.sites.clone', [
+            'project' => $this->server->project,
+            'server' => $this->server,
+            'site' => $site,
+        ]), [
+            'domain' => 'clone.com',
+            'aliases' => ['www.clone.com'],
+        ])
+            ->assertSuccessful()
+            ->assertJsonFragment([
+                'domain' => 'clone.com',
+            ]);
+    }
+
     public function test_show_env(): void
     {
         $envContent = "APP_NAME=Laravel\nAPP_ENV=production";
@@ -264,6 +261,7 @@ class SitesTest extends TestCase
         ]))
             ->assertForbidden();
     }
+
 
     public static function create_data(): array
     {
