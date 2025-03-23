@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Actions\Site\CloneSite;
 use App\Actions\Site\CreateSite;
 use App\Actions\Site\UpdateAliases;
+use App\Actions\Site\UpdateDeploymentScript;
 use App\Actions\Site\UpdateEnv;
 use App\Actions\Site\UpdateLoadBalancer;
 use App\Enums\LoadBalancerMethod;
@@ -134,6 +135,23 @@ class SiteController extends Controller
         return new SiteResource($site);
     }
 
+    #[Put('{site}/deployment-script', name: 'api.projects.servers.sites.deployment-script', middleware: 'ability:write')]
+    #[Endpoint(title: 'deployment-script', description: 'Update site deployment script')]
+    #[BodyParam(name: 'script', type: 'string', description: 'Content of the deployment script')]
+    #[Response(status: 200)]
+    public function updateDeploymentScript(Request $request, Project $project, Server $server, Site $site): SiteResource
+    {
+        $this->authorize('update', [$site, $server]);
+
+        $this->validateRoute($project, $server, $site);
+
+        $this->validate($request, UpdateDeploymentScript::rules());
+
+        app(UpdateDeploymentScript::class)->update($site, $request->all());
+
+        return new SiteResource($site);
+    }
+
 
     #[Put('{site}/env', name: 'api.projects.servers.sites.env', middleware: 'ability:write')]
     #[Endpoint(title: 'env', description: 'Update site .env file')]
@@ -153,7 +171,7 @@ class SiteController extends Controller
 
         return new SiteResource($site);
     }
-  
+
     #[Get('{site}/env', name: 'api.projects.servers.sites.env.show', middleware: 'ability:read')]
     #[Endpoint(title: 'env', description: 'Get site .env file content')]
     #[Response(content: [

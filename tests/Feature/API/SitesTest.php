@@ -190,6 +190,58 @@ class SitesTest extends TestCase
         ]);
     }
 
+    public function test_update_deployment_script(): void
+    {
+        SSH::fake();
+
+        Sanctum::actingAs($this->user, ['read', 'write']);
+
+        /** @var Site $site */
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $scriptContent = "git pull\ncomposer install\nphp artisan migrate";
+
+        $this->json('PUT', route('api.projects.servers.sites.deployment-script', [
+            'project' => $this->server->project,
+            'server' => $this->server,
+            'site' => $site,
+        ]), [
+            'script' => $scriptContent,
+        ])
+            ->assertSuccessful()
+            ->assertJsonFragment([
+                'domain' => $site->domain,
+            ]);
+
+        $this->assertDatabaseHas('deployment_scripts', [
+            'site_id' => $site->id,
+            'content' => $scriptContent,
+        ]);
+    }
+
+    public function test_update_deployment_script_without_content(): void
+    {
+        SSH::fake();
+
+        Sanctum::actingAs($this->user, ['read', 'write']);
+
+        /** @var Site $site */
+        $site = Site::factory()->create([
+            'server_id' => $this->server->id,
+        ]);
+
+        $this->json('PUT', route('api.projects.servers.sites.deployment-script', [
+            'project' => $this->server->project,
+            'server' => $this->server,
+            'site' => $site,
+        ]), [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['script']);
+    }
+
+
     public function test_clone_site(): void
     {
         SSH::fake();
@@ -261,7 +313,6 @@ class SitesTest extends TestCase
         ]))
             ->assertForbidden();
     }
-
 
     public static function create_data(): array
     {
